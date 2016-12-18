@@ -53,7 +53,7 @@ public abstract class MediaStream implements Stream {
 	public static final byte MODE_MEDIACODEC_API = 0x02;
 
 	/** Raw audio/video will be encoded using the MediaCode API with a surface. */
-	public static final byte MODE_MEDIACODEC_API_2 = 0x05;
+	//public static final byte MODE_MEDIACODEC_API_2 = 0x05;
 
 	/** A LocalSocket will be used to feed the MediaRecorder object */
 	public static final byte PIPE_API_LS = 0x01;
@@ -204,13 +204,13 @@ public abstract class MediaStream implements Stream {
 	 * If the mode is set to {@link #MODE_MEDIARECORDER_API}, raw audio/video will be encoded 
 	 * using the MediaRecorder API. <br />
 	 * 
-	 * If the mode is set to {@link #MODE_MEDIACODEC_API} or to {@link #MODE_MEDIACODEC_API_2}, 
+	 * If the mode is set to {@link #MODE_MEDIACODEC_API} or to
 	 * audio/video will be encoded with using the MediaCodec. <br />
 	 * 
-	 * The {@link #MODE_MEDIACODEC_API_2} mode only concerns {@link VideoStream}, it makes 
+	 * The mode only concerns {@link VideoStream}, it makes
 	 * use of the createInputSurface() method of the MediaCodec API (Android 4.3 is needed there). <br />
 	 * 
-	 * @param mode Can be {@link #MODE_MEDIARECORDER_API}, {@link #MODE_MEDIACODEC_API} or {@link #MODE_MEDIACODEC_API_2} 
+	 * @param mode Can be {@link #MODE_MEDIARECORDER_API}, {@link #MODE_MEDIACODEC_API} or
 	 */
 	public void setStreamingMethod(byte mode) {
 		mRequestedMode = mode;
@@ -392,5 +392,10 @@ public abstract class MediaStream implements Stream {
 			}
 		}
 	}
-	
+
+	protected void log(String message) {
+		AppLogger.log(getClass().getSimpleName() + " " + message);
+	}
+
+
 }

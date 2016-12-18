@@ -24,6 +24,8 @@ import java.io.IOException;
 
 import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.rtp.H263Packetizer;
+
+import android.content.Context;
 import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
@@ -38,22 +40,8 @@ import android.service.textservice.SpellCheckerService.Session;
  */
 public class H263Stream extends VideoStream {
 
-	/**
-	 * Constructs the H.263 stream.
-	 * Uses CAMERA_FACING_BACK by default.
-	 * @throws IOException
-	 */
-	public H263Stream() throws IOException {
-		this(CameraInfo.CAMERA_FACING_BACK);
-	}	
-
-	/**
-	 * Constructs the H.263 stream.
-	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT 
-	 * @throws IOException
-	 */	
-	public H263Stream(int cameraId) {
-		super(cameraId);
+	public H263Stream(Context context) {
+		super(context);
 		mCameraImageFormat = ImageFormat.NV21;
 		mVideoEncoder = MediaRecorder.VideoEncoder.H263;
 		mPacketizer = new H263Packetizer();

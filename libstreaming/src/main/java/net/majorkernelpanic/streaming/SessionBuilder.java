@@ -33,6 +33,7 @@ import net.majorkernelpanic.streaming.video.H264Stream;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 import net.majorkernelpanic.streaming.video.VideoStream;
 import android.content.Context;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
 
@@ -67,11 +68,10 @@ public class SessionBuilder {
 	private Context mContext;
 	private int mVideoEncoder = VIDEO_H263; 
 	private int mAudioEncoder = AUDIO_AMRNB;
-	private int mCamera = CameraInfo.CAMERA_FACING_BACK;
 	private int mTimeToLive = 64;
 	private int mOrientation = 0;
 	private boolean mFlash = false;
-	private SurfaceView mSurfaceView = null;
+	private SurfaceTexture mSurfaceView = null;
 	private String mOrigin = null;
 	private String mDestination = null;
 	private Session.Callback mCallback = null;
@@ -125,10 +125,10 @@ public class SessionBuilder {
 
 		switch (mVideoEncoder) {
 		case VIDEO_H263:
-			session.addVideoTrack(new H263Stream(mCamera));
+			session.addVideoTrack(new H263Stream(mContext));
 			break;
 		case VIDEO_H264:
-			H264Stream stream = new H264Stream(mCamera);
+			H264Stream stream = new H264Stream(mContext);
 			if (mContext!=null) 
 				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 			session.addVideoTrack(stream);
@@ -137,9 +137,9 @@ public class SessionBuilder {
 
 		if (session.getVideoTrack()!=null) {
 			VideoStream video = session.getVideoTrack();
-			video.setFlashState(mFlash);
+			//video.setFlashState(mFlash);
 			video.setVideoQuality(mVideoQuality);
-			video.setSurfaceView(mSurfaceView);
+			video.setSurfaceTexture(mSurfaceView);
 			video.setPreviewOrientation(mOrientation);
 			video.setDestinationPorts(5006);
 		}
@@ -204,11 +204,6 @@ public class SessionBuilder {
 		return this;
 	}
 
-	public SessionBuilder setCamera(int camera) {
-		mCamera = camera;
-		return this;
-	}
-
 	public SessionBuilder setTimeToLive(int ttl) {
 		mTimeToLive = ttl;
 		return this;
@@ -217,7 +212,7 @@ public class SessionBuilder {
 	/** 
 	 * Sets the SurfaceView required to preview the video stream. 
 	 **/
-	public SessionBuilder setSurfaceView(SurfaceView surfaceView) {
+	public SessionBuilder setSurfaceTexture(SurfaceTexture surfaceView) {
 		mSurfaceView = surfaceView;
 		return this;
 	}
@@ -256,11 +251,6 @@ public class SessionBuilder {
 		return mAudioEncoder;
 	}
 
-	/** Returns the id of the {@link android.hardware.Camera} set with {@link #setCamera(int)}. */
-	public int getCamera() {
-		return mCamera;
-	}
-
 	/** Returns the video encoder set with {@link #setVideoEncoder(int)}. */
 	public int getVideoEncoder() {
 		return mVideoEncoder;
@@ -281,8 +271,8 @@ public class SessionBuilder {
 		return mFlash;
 	}
 
-	/** Returns the SurfaceView set with {@link #setSurfaceView(SurfaceView)}. */
-	public SurfaceView getSurfaceView() {
+	/** Returns the SurfaceView set with {@link #setSurfaceTexture(SurfaceTexture)} (SurfaceView)}. */
+	public SurfaceTexture getSurfaceView() {
 		return mSurfaceView;
 	}
 	
@@ -297,12 +287,11 @@ public class SessionBuilder {
 		return new SessionBuilder()
 		.setDestination(mDestination)
 		.setOrigin(mOrigin)
-		.setSurfaceView(mSurfaceView)
+		.setSurfaceTexture(mSurfaceView)
 		.setPreviewOrientation(mOrientation)
 		.setVideoQuality(mVideoQuality)
 		.setVideoEncoder(mVideoEncoder)
 		.setFlashEnabled(mFlash)
-		.setCamera(mCamera)
 		.setTimeToLive(mTimeToLive)
 		.setAudioEncoder(mAudioEncoder)
 		.setAudioQuality(mAudioQuality)

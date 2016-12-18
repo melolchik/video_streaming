@@ -259,23 +259,6 @@ public class Session {
 			mVideoStream.setVideoQuality(quality);
 		}
 	}
-
-	/**
-	 * Sets a Surface to show a preview of recorded media (video). <br />
-	 * You can call this method at any time and changes will take 
-	 * effect next time you call {@link #start()} or {@link #startPreview()}.
-	 */
-	public void setSurfaceView(final SurfaceView view) {
-		mHandler.post(new Runnable() {
-			@Override
-			public void run() {
-				if (mVideoStream != null) {
-					mVideoStream.setSurfaceView(view);
-				}
-			}				
-		});
-	}
-
 	/** 
 	 * Sets the orientation of the preview. <br />
 	 * You can call this method at any time and changes will take 
@@ -388,6 +371,7 @@ public class Session {
 			RuntimeException,
 			IOException {
 
+		log("syncConfigure");
 		for (int id=0;id<2;id++) {
 			Stream stream = id==0 ? mAudioStream : mVideoStream;
 			if (stream!=null && !stream.isStreaming()) {
@@ -444,6 +428,7 @@ public class Session {
 			UnknownHostException,
 			IOException {
 
+		log("syncStart id = " + id);
 		Stream stream = id==0 ? mAudioStream : mVideoStream;
 		if (stream!=null && !stream.isStreaming()) {
 			try {
@@ -538,7 +523,7 @@ public class Session {
 
 	/**
 	 * Asynchronously starts the camera preview. <br />
-	 * You should of course pass a {@link SurfaceView} to {@link #setSurfaceView(SurfaceView)}
+	 * You should of course pass a {@link SurfaceView} to }
 	 * before calling this method. Otherwise, the {@link Callback#onSessionError(int, int, Exception)}
 	 * callback will be called with {@link #ERROR_INVALID_SURFACE}.
 	 */
@@ -588,7 +573,7 @@ public class Session {
 	 * If {@link #start()} has been called, the stream will be  briefly interrupted.<br />
 	 * To find out which camera is currently selected, use {@link #getCamera()}
 	 **/
-	public void switchCamera() {
+	/*public void switchCamera() {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
@@ -610,24 +595,16 @@ public class Session {
 				}
 			}
 		});
-	}
+	}*/
 
-	/**
-	 * Returns the id of the camera currently selected. <br />
-	 * It can be either {@link CameraInfo#CAMERA_FACING_BACK} or 
-	 * {@link CameraInfo#CAMERA_FACING_FRONT}.
-	 */
-	public int getCamera() {
-		return mVideoStream != null ? mVideoStream.getCamera() : 0;
 
-	}
 
 	/** 
 	 * Toggles the LED of the phone if it has one.
 	 * You can get the current state of the flash with 
 	 * {@link Session#getVideoTrack()} and {@link VideoStream#getFlashState()}.
 	 **/
-	public void toggleFlash() {
+/*	public void toggleFlash() {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
@@ -640,7 +617,7 @@ public class Session {
 				}
 			}
 		});
-	}	
+	}	*/
 
 	/** Deletes all existing tracks & release associated resources. */
 	public void release() {
@@ -740,6 +717,10 @@ public class Session {
 			return mAudioStream;
 		else
 			return mVideoStream;
+	}
+
+	protected static void log(String message) {
+		AppLogger.log("Session" + " " + message);
 	}
 
 }

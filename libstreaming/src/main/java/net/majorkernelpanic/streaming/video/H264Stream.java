@@ -32,6 +32,7 @@ import net.majorkernelpanic.streaming.hw.EncoderDebugger;
 import net.majorkernelpanic.streaming.mp4.MP4Config;
 import net.majorkernelpanic.streaming.rtp.H264Packetizer;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.SharedPreferences.Editor;
 import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
@@ -44,7 +45,7 @@ import android.util.Log;
 /**
  * A class for streaming H.264 from the camera of an android device using RTP.
  * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
- * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
+ * Call  {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
  * to configure the stream. You can then call {@link #start()} to start the RTP stream.
  * Call {@link #stop()} to stop the stream.
  */
@@ -55,21 +56,8 @@ public class H264Stream extends VideoStream {
 	private Semaphore mLock = new Semaphore(0);
 	private MP4Config mConfig;
 
-	/**
-	 * Constructs the H.264 stream.
-	 * Uses CAMERA_FACING_BACK by default.
-	 */
-	public H264Stream() {
-		this(CameraInfo.CAMERA_FACING_BACK);
-	}
-
-	/**
-	 * Constructs the H.264 stream.
-	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
-	 * @throws IOException
-	 */
-	public H264Stream(int cameraId) {
-		super(cameraId);
+	public H264Stream(Context context) {
+		super(context);
 		mMimeType = "video/avc";
 		mCameraImageFormat = ImageFormat.NV21;
 		mVideoEncoder = MediaRecorder.VideoEncoder.H264;
@@ -91,6 +79,7 @@ public class H264Stream extends VideoStream {
 	 * This will also open the camera and display the preview if {@link #startPreview()} has not already been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
+		log("start");
 		if (!mStreaming) {
 			configure();
 			byte[] pps = Base64.decode(mConfig.getB64PPS(), Base64.NO_WRAP);
@@ -122,8 +111,7 @@ public class H264Stream extends VideoStream {
 
 	@SuppressLint("NewApi")
 	private MP4Config testMediaCodecAPI() throws RuntimeException, IOException {
-		createCamera();
-		updateCamera();
+		mCameraHelper.open(mSurfaceTexture);
 		try {
 			if (mQuality.resX>=640) {
 				// Using the MediaCodec API with the buffer method for high resolutions is too slow
@@ -170,15 +158,14 @@ public class H264Stream extends VideoStream {
 		mFlashEnabled = false;
 
 		boolean previewStarted = mPreviewStarted;
-		
-		boolean cameraOpen = mCamera!=null;
-		createCamera();
+
+		mCameraHelper.open(mSurfaceTexture);
 
 		// Stops the preview if needed
 		if (mPreviewStarted) {
-			lockCamera();
+			//lockCamera();
 			try {
-				mCamera.stopPreview();
+				//mCamera.stopPreview();
 			} catch (Exception e) {}
 			mPreviewStarted = false;
 		}
@@ -190,16 +177,16 @@ public class H264Stream extends VideoStream {
 			e1.printStackTrace();
 		}
 
-		unlockCamera();
+		//unlockCamera();
 
 		try {
 			
 			mMediaRecorder = new MediaRecorder();
-			mMediaRecorder.setCamera(mCamera);
+			//mMediaRecorder.setCamera(mCamera);
 			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
-			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
+			mMediaRecorder.setPreviewDisplay(mSurface);
 			mMediaRecorder.setVideoSize(mRequestedQuality.resX,mRequestedQuality.resY);
 			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
 			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
@@ -245,8 +232,8 @@ public class H264Stream extends VideoStream {
 			} catch (Exception e) {}
 			mMediaRecorder.release();
 			mMediaRecorder = null;
-			lockCamera();
-			if (!cameraOpen) destroyCamera();
+			//lockCamera();
+			//if (!cameraOpen) destroyCamera();
 			// Restore flash state
 			mFlashEnabled = savedFlashState;
 			if (previewStarted) {

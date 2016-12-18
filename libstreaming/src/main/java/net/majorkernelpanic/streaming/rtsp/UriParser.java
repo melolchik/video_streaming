@@ -100,12 +100,12 @@ public class UriParser {
 				}
 
 				// CAMERA -> the client can choose between the front facing camera and the back facing camera
-				else if (paramName.equalsIgnoreCase("camera")) {
+				/*else if (paramName.equalsIgnoreCase("camera")) {
 					if (paramValue.equalsIgnoreCase("back")) 
 						builder.setCamera(CameraInfo.CAMERA_FACING_BACK);
 					else if (paramValue.equalsIgnoreCase("front")) 
 						builder.setCamera(CameraInfo.CAMERA_FACING_FRONT);
-				}
+				}*/
 
 				// MULTICAST -> the stream will be sent to a multicast group
 				// The default mutlicast address is 228.5.6.7, but the client can specify another
