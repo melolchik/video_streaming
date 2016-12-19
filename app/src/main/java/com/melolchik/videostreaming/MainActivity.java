@@ -122,6 +122,10 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
 
+        if(mClient.isStreaming()){
+            mSession.stopPreview();
+            mClient.stopStream();
+        }
         return false;
     }
 

@@ -574,7 +574,7 @@ public class Session {
 	 * To find out which camera is currently selected, use {@link #getCamera()}
 	 **/
 	/*public void switchCamera() {
-		mHandler.post(new Runnable() {
+		mBackgroundHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -605,7 +605,7 @@ public class Session {
 	 * {@link Session#getVideoTrack()} and {@link VideoStream#getFlashState()}.
 	 **/
 /*	public void toggleFlash() {
-		mHandler.post(new Runnable() {
+		mBackgroundHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {

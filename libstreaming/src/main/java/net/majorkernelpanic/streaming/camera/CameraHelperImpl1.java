@@ -3,18 +3,14 @@ package net.majorkernelpanic.streaming.camera;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
-import android.hardware.camera2.CameraManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Surface;
 
-import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
-import net.majorkernelpanic.streaming.exceptions.InvalidSurfaceException;
+import net.majorkernelpanic.streaming.video.VideoQuality;
 
 import java.io.IOException;
-import java.util.concurrent.Semaphore;
 
 /**
  * Created by Olga Melekhina on 18.12.2016.
@@ -25,14 +21,14 @@ public class CameraHelperImpl1 extends CameraImplBase {
     protected int mCameraId = 0;
     protected Camera mCamera;
 
-    public CameraHelperImpl1(Context context) {
-        super(context);
+    public CameraHelperImpl1(Context context, VideoQuality videoQuality) {
+        super(context, videoQuality);
         mMainHandler = new Handler(Looper.getMainLooper());
 
         new HandlerThread("CameraHelperImpl2") {
             @Override
             protected void onLooperPrepared() {
-                mHandler = new Handler();
+                mBackgroundHandler = new Handler();
             }
         }.start();
 
@@ -62,28 +58,55 @@ public class CameraHelperImpl1 extends CameraImplBase {
         return mCameraId;
     }
 
+    protected Camera.PreviewCallback mPreviewCallback = new Camera.PreviewCallback() {
+        @Override
+        public void onPreviewFrame(byte[] bytes, Camera camera) {
+            log("onPreviewFrame " + bytes);
+            if (mOnPictureTakeListener != null && bytes != null) {
+                mOnPictureTakeListener.onPictureTaken(bytes);
+            }
+        }
+    };
+
     @Override
     public void open(final SurfaceTexture surfaceTexture) {
 
         mSurfaceTexture = surfaceTexture;
         if (mSurfaceTexture == null) return;
-        if(isStarted()) return;
-        mHandler.post(new Runnable() {
+        if (isStarted()) return;
+        mBackgroundHandler.post(new Runnable() {
             @Override
             public void run() {
                 try {
                     mCamera = Camera.open();
                     setStarted(true);
-                    /*
-                     Camera.Parameters parameters = mCamera.getParameters();
-                if (parameters.getFlashMode() != null) {
-                    parameters.setFlashMode(mFlashEnabled ? Camera.Parameters.FLASH_MODE_TORCH : Camera.Parameters.FLASH_MODE_OFF);
-                }
-                parameters.setRecordingHint(true);
-                mCamera.setParameters(parameters);*/
-                mCamera.setDisplayOrientation(90);
+
+                    Camera.Parameters parameters = mCamera.getParameters();
+                    mVideoQuality = VideoQuality.determineClosestSupportedResolution(parameters, mVideoQuality);
+                    int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+
+                    double ratio = (double)mVideoQuality.resX/(double)mVideoQuality.resY;
+
+
+                    parameters.setPreviewSize(mVideoQuality.resX, mVideoQuality.resY);
+                    parameters.setPreviewFpsRange(max[0], max[1]);
+                    mCamera.setDisplayOrientation(90);
+
+                    try {
+                        mCamera.setParameters(parameters);
+                        mCamera.setDisplayOrientation(90);
+
+                    } catch (RuntimeException e) {
+                        throw e;
+                    }
 
                     mCamera.setPreviewTexture(surfaceTexture);
+
+
+                    //for (int i = 0; i < 10; i++)
+                     //   mCamera.addCallbackBuffer(new byte[3 * mVideoQuality.resX * mVideoQuality.resY / 2]);
+                    mCamera.setPreviewCallback(mPreviewCallback);
+                    // mCamera.setPreviewCallback(mPreviewCallback);
                     mCamera.startPreview();
                 } catch (IOException e) {
                     Log.d("CAMERA", e.getMessage());
@@ -95,7 +118,7 @@ public class CameraHelperImpl1 extends CameraImplBase {
 
     @Override
     public void close() {
-        if(!isStarted()) return;
+        if (!isStarted()) return;
         setStarted(false);
         if (mCamera != null) {
             mCamera.stopPreview();

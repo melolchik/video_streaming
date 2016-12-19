@@ -1,6 +1,7 @@
 package net.majorkernelpanic.streaming.camera;
 
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -8,14 +9,16 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
+import android.media.Image;
+import android.media.ImageReader;
 import android.util.Log;
 import android.view.Surface;
 
-import net.majorkernelpanic.streaming.AppLogger;
+import net.majorkernelpanic.streaming.hw.EncoderDebugger;
+import net.majorkernelpanic.streaming.hw.NV21Convertor;
+import net.majorkernelpanic.streaming.video.VideoQuality;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -24,18 +27,74 @@ import java.util.Arrays;
 
 public class CameraHelperImpl2 extends CameraImplBase{
 
+    private static final int IMAGE_WIDTH  = 360;
+    private static final int IMAGE_HEIGHT = 240;
+    private static final int MAX_IMAGES   = 1000;
+
+
     protected final CameraManager mCameraManager;
     protected Surface mSurface;
     private CameraDevice mCameraDevice;
     protected CameraCaptureSession mCameraCaptureSession;
+    private ImageReader mImageReader;
 
 
 
-    public CameraHelperImpl2(Context context) {
-        super(context);
+    public CameraHelperImpl2(Context context, VideoQuality videoQuality) {
+        super(context,videoQuality);
         mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
 
+        int width = IMAGE_WIDTH;
+        int height = IMAGE_HEIGHT;
+        if(videoQuality != null){
+            width = videoQuality.resX;
+            height = videoQuality.resY;
+        }
+        mImageReader = ImageReader.newInstance(width, height,
+                ImageFormat.YUV_420_888, MAX_IMAGES);
+        mImageReader.setOnImageAvailableListener(mImageAvailableListener, mBackgroundHandler);
+
     }
+
+    public ImageReader.OnImageAvailableListener mImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader imageReader) {
+
+
+
+            log("mOnPictureTakeListener = " + mOnPictureTakeListener);
+            if(mOnPictureTakeListener != null){
+                log("onImageAvailable");
+                Image image = imageReader.acquireLatestImage();
+                if(image == null) return;
+                ByteBuffer imageBuf = image.getPlanes()[0].getBuffer();
+                final byte[] imageBytes = new byte[imageBuf.remaining()];
+                imageBuf.get(imageBytes);
+                image.close();
+                mOnPictureTakeListener.onPictureTaken(imageBytes);
+            }
+
+
+        }
+    };
+
+    /*private void onPictureTaken(byte[] imageBytes) {
+        if (imageBytes != null && mMediaCodec != null) {
+            ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
+                try {
+                    int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
+                    if (bufferIndex>=0) {
+                        inputBuffers[bufferIndex].clear();
+
+                        convertor.convert(imageBytes, inputBuffers[bufferIndex]);
+                        mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
+                    } else {
+                       log("No buffer available !");
+                    }
+                }
+            }
+
+    }*/
 
     public String getCamera() {
         try {
@@ -52,12 +111,13 @@ public class CameraHelperImpl2 extends CameraImplBase{
         return null;
     }
 
+
     private CameraCaptureSession.StateCallback mSessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(CameraCaptureSession session) {
             mCameraCaptureSession = session;
             try {
-                session.setRepeatingRequest(createCaptureRequest(), null, mHandler);
+                session.setRepeatingRequest(createCaptureRequest(), null, mBackgroundHandler);
             } catch (CameraAccessException e) {
                 log(e.getMessage());
             }
@@ -72,6 +132,7 @@ public class CameraHelperImpl2 extends CameraImplBase{
         try {
             CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             builder.addTarget(mSurface);
+            builder.addTarget(mImageReader.getSurface());
 
             return builder.build();
         } catch (CameraAccessException e) {
@@ -85,7 +146,7 @@ public class CameraHelperImpl2 extends CameraImplBase{
         public void onOpened(CameraDevice camera) {
             mCameraDevice = camera;
             try {
-                mCameraDevice.createCaptureSession(Arrays.asList(mSurface), mSessionStateCallback, mHandler);
+                mCameraDevice.createCaptureSession(Arrays.asList(mSurface,mImageReader.getSurface()), mSessionStateCallback, mBackgroundHandler);
             } catch (CameraAccessException e) {
                 log(e.getMessage());
             }
@@ -111,7 +172,7 @@ public class CameraHelperImpl2 extends CameraImplBase{
         if (mSurface == null) return;
         if (isStarted()) return;
         try {
-            mCameraManager.openCamera(getCamera(), mCameraStateCallback, mHandler);
+            mCameraManager.openCamera(getCamera(), mCameraStateCallback, mBackgroundHandler);
             setStarted(true);
         } catch (CameraAccessException e)
 
@@ -138,6 +199,9 @@ public class CameraHelperImpl2 extends CameraImplBase{
             log(se.getMessage());
         }
 
+    }
+
+    protected void test(){
     }
 
 
