@@ -28,6 +28,7 @@ import java.net.MulticastSocket;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import net.majorkernelpanic.streaming.AppLogger;
 import net.majorkernelpanic.streaming.rtcp.SenderReport;
 import android.os.SystemClock;
 import android.util.Log;
@@ -116,6 +117,7 @@ public class RtpSocket implements Runnable {
 		try {
 		mSocket = new MulticastSocket();
 		} catch (Exception e) {
+			log("init RtpSocket ex = " + e.getMessage());
 			throw new RuntimeException(e.getMessage());
 		}
 		
@@ -168,6 +170,7 @@ public class RtpSocket implements Runnable {
 
 	/** Sets the destination address and to which the packets will be sent. */
 	public void setDestination(InetAddress dest, int dport, int rtcpPort) {
+		log("setDestinations: " + dport + " " + rtcpPort);
 		if (dport != 0 && rtcpPort != 0) {
 			mTransport = TRANSPORT_UDP;
 			mPort = dport;
@@ -231,6 +234,7 @@ public class RtpSocket implements Runnable {
 	
 	/** Sends the RTP packet over the network. */
 	public void commitBuffer(int length) throws IOException {
+		log("commitBuffer mBufferIn = " + mBufferIn);
 		updateSequence();
 		mPackets[mBufferIn].setLength(length);
 
@@ -242,7 +246,7 @@ public class RtpSocket implements Runnable {
 		if (mThread == null) {
 			mThread = new Thread(this);
 			mThread.start();
-		}		
+		}
 		
 	}
 
@@ -273,6 +277,7 @@ public class RtpSocket implements Runnable {
 	/** The Thread sends the packets in the FIFO one by one at a constant rate. */
 	@Override
 	public void run() {
+		log("run");
 		Statistics stats = new Statistics(50,3000);
 		try {
 			// Caches mCacheSize milliseconds of the stream in the FIFO.
@@ -289,11 +294,11 @@ public class RtpSocket implements Runnable {
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
 						if (mCacheSize>0) Thread.sleep(d);
 					} else if ((mTimestamps[mBufferOut]-mOldTimestamp)<0) {
-						Log.e(TAG, "TS: "+mTimestamps[mBufferOut]+" OLD: "+mOldTimestamp);
+						log("TS: "+mTimestamps[mBufferOut]+" OLD: "+mOldTimestamp);
 					}
 					delta += mTimestamps[mBufferOut]-mOldTimestamp;
 					if (delta>500000000 || delta<0) {
-						//Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
+						log("permits: "+mBufferCommitted.availablePermits());
 						delta = 0;
 					}
 				}
@@ -301,6 +306,7 @@ public class RtpSocket implements Runnable {
 				mOldTimestamp = mTimestamps[mBufferOut];
 				if (mCount++>30) {
 					if (mTransport == TRANSPORT_UDP) {
+						log("send UDP");
 						mSocket.send(mPackets[mBufferOut]);
 					} else {
 						sendTCP();
@@ -310,16 +316,18 @@ public class RtpSocket implements Runnable {
 				mBufferRequested.release();
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			log("ex = " + e.getMessage());
+		}finally {
+			mThread = null;
+			resetFifo();
 		}
-		mThread = null;
-		resetFifo();
+
 	}
 
 	private void sendTCP() {
 		synchronized (mOutputStream) {
 			int len = mPackets[mBufferOut].getLength();
-			Log.d(TAG,"sent "+len);
+			log("sent "+len);
 			mTcpHeader[2] = (byte) (len>>8);
 			mTcpHeader[3] = (byte) (len&0xFF);
 			try {
@@ -446,6 +454,11 @@ public class RtpSocket implements Runnable {
 			return l>0 ? l : 0;
 		}
 
+	}
+
+
+	protected void log(String message) {
+		AppLogger.log(getClass().getSimpleName() + " " + message);
 	}
 
 }

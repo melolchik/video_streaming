@@ -26,20 +26,15 @@ public abstract class CameraImplBase {
 
     protected OnPictureTakeListener mOnPictureTakeListener;
 
-    public interface OnPictureTakeListener{
+    public interface OnPictureTakeListener {
         void onPictureTaken(byte[] imageBytes);
     }
 
 
-    public CameraImplBase(Context context, VideoQuality videoQuality){
+    public CameraImplBase(Context context, VideoQuality videoQuality) {
         mContext = context;
         mVideoQuality = videoQuality;
         mMainHandler = new Handler(Looper.getMainLooper());
-
-        mBackgroundThread = new HandlerThread("CameraThread");
-        mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-
     }
 
     public Context getContext() {
@@ -54,8 +49,15 @@ public abstract class CameraImplBase {
         mIsStarted = started;
     }
 
-    public abstract void open(SurfaceTexture surfaceTexture);
-    public abstract void close();
+    public void open(SurfaceTexture surfaceTexture) {
+        mBackgroundThread = new HandlerThread("CameraThread");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    public void close() {
+        mBackgroundThread.quit();
+    }
 
     public void setOnPictureTakeListener(OnPictureTakeListener onPictureTakeListener) {
         mOnPictureTakeListener = onPictureTakeListener;

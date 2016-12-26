@@ -1,45 +1,19 @@
 package com.melolchik.videostreaming;
 
 
-import android.content.Context;
-import android.graphics.Camera;
 import android.graphics.SurfaceTexture;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CaptureFailure;
-import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.TotalCaptureResult;
-import android.media.Image;
-import android.media.ImageReader;
-import android.media.MediaRecorder;
-import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.TextureView;
 import android.widget.Button;
+import android.widget.Toast;
 
 import net.majorkernelpanic.streaming.AppLogger;
 import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
-import net.majorkernelpanic.streaming.audio.AudioQuality;
-import net.majorkernelpanic.streaming.camera.CameraHelper;
-import net.majorkernelpanic.streaming.camera.CameraHelperImpl1;
-import net.majorkernelpanic.streaming.camera.CameraHelperImpl2;
-import net.majorkernelpanic.streaming.camera.CameraImplBase;
 import net.majorkernelpanic.streaming.rtsp.RtspClient;
 
-import java.io.File;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,7 +24,7 @@ import butterknife.OnClick;
 
 
 public class MainActivity extends AppCompatActivity implements TextureView.SurfaceTextureListener,Session.Callback,
-        RtspClient.Callback{
+        RtspClient.Callback, PermissionManager.PermissionResultListener {
 
     public final static String TAG = "VIDEO_STREAMING";
     protected @BindView(R.id.texture_view)
@@ -61,7 +35,8 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
 
 
     protected SurfaceTexture mSurfaceTexture;
-    //protected CameraImplBase mHelperImpl;
+
+    protected PermissionManager mPermissionManager = new PermissionManager();
 
     // Rtsp session
     private Session mSession;
@@ -73,12 +48,14 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         mTextureView.setSurfaceTextureListener(this);
-        //mHelperImpl = new CameraHelperImpl1(getApplicationContext());
-
-
-
+        mButton.setEnabled(false);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mButton.setEnabled(mPermissionManager.checkPermissionGrantedByCode(this,this,PermissionManager.REQUEST_CODE_ALL));
+    }
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
@@ -86,7 +63,6 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         mSession = SessionBuilder.getInstance()
                 .setContext(getApplicationContext())
                 .setAudioEncoder(SessionBuilder.AUDIO_NONE)
-                .setAudioQuality(new AudioQuality(8000, 16000))
                 .setVideoEncoder(SessionBuilder.VIDEO_H264)
                 .setSurfaceTexture(surfaceTexture)
                 .setPreviewOrientation(0)
@@ -97,10 +73,8 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         mClient = new RtspClient();
         mClient.setSession(mSession);
          mClient.setCallback(this);
-        //mSurfaceView.setAspectRatioMode(SurfaceView.ASPECT_RATIO_PREVIEW);
         String ip, port, path;
 
-        // We parse the URI written in the Editext
         Pattern uri = Pattern.compile("rtsp://(.+):(\\d+)/(.+)");
         Matcher m = uri.matcher("rtsp://46.28.207.136:554/live/test_android_stream22041983");
         m.find();
@@ -125,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         if(mClient.isStreaming()){
             mSession.stopPreview();
             mClient.stopStream();
+
         }
         return false;
     }
@@ -189,4 +164,44 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
     protected void log(String message) {
         AppLogger.log(getClass().getSimpleName() + " " + message);
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (mPermissionManager != null) {
+            mPermissionManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+    /**
+     * From  PermissionResultListener
+     * Here can be only part of permissions granted, if permissionsNotGranted list is not empty
+     * For get all requested permission list use  PermissionManager.getPermissionListByCode()
+     * If two lists are equal ==> permission all denied
+     *
+     * @param requestCode               the request code
+     * @param permissionsNotGranted the permissions not granted
+     */
+    @Override
+    public void onPermissionsGranted(int requestCode, List<String> permissionsNotGranted) {
+
+        if(permissionsNotGranted.isEmpty()){
+            mButton.setEnabled(true);
+        }else {
+            mButton.setEnabled(false);
+            showErrorToast("Please, check all permissions in Settings");
+        }
+    }
+
+    @Override
+    public void onPermissionsDenied(int requestCode) {
+
+        mButton.setEnabled(false);
+        showErrorToast("Please, check all permissions in Settings");
+    }
+
+    protected void showErrorToast(String message) {
+        Toast toast = Toast.makeText(this, message, Toast.LENGTH_LONG);
+        toast.show();
+    }
+
 }

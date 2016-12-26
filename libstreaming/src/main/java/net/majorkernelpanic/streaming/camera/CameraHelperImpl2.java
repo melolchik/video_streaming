@@ -29,7 +29,7 @@ public class CameraHelperImpl2 extends CameraImplBase{
 
     private static final int IMAGE_WIDTH  = 360;
     private static final int IMAGE_HEIGHT = 240;
-    private static final int MAX_IMAGES   = 1000;
+    private static final int MAX_IMAGES   = 2;
 
 
     protected final CameraManager mCameraManager;
@@ -51,7 +51,7 @@ public class CameraHelperImpl2 extends CameraImplBase{
             height = videoQuality.resY;
         }
         mImageReader = ImageReader.newInstance(width, height,
-                ImageFormat.YUV_420_888, MAX_IMAGES);
+                ImageFormat.YV12, MAX_IMAGES);
         mImageReader.setOnImageAvailableListener(mImageAvailableListener, mBackgroundHandler);
 
     }
@@ -59,42 +59,26 @@ public class CameraHelperImpl2 extends CameraImplBase{
     public ImageReader.OnImageAvailableListener mImageAvailableListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader imageReader) {
-
-
-
-            log("mOnPictureTakeListener = " + mOnPictureTakeListener);
-            if(mOnPictureTakeListener != null){
-                log("onImageAvailable");
+                //log("onImageAvailable");
                 Image image = imageReader.acquireLatestImage();
                 if(image == null) return;
                 ByteBuffer imageBuf = image.getPlanes()[0].getBuffer();
                 final byte[] imageBytes = new byte[imageBuf.remaining()];
                 imageBuf.get(imageBytes);
                 image.close();
-                mOnPictureTakeListener.onPictureTaken(imageBytes);
+            if(mOnPictureTakeListener != null){
+                mBackgroundHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mOnPictureTakeListener.onPictureTaken(imageBytes);
+                    }
+                });
+
             }
 
 
         }
     };
-
-    /*private void onPictureTaken(byte[] imageBytes) {
-        if (imageBytes != null && mMediaCodec != null) {
-            ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-                try {
-                    int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
-                    if (bufferIndex>=0) {
-                        inputBuffers[bufferIndex].clear();
-
-                        convertor.convert(imageBytes, inputBuffers[bufferIndex]);
-                        mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
-                    } else {
-                       log("No buffer available !");
-                    }
-                }
-            }
-
-    }*/
 
     public String getCamera() {
         try {
@@ -167,10 +151,12 @@ public class CameraHelperImpl2 extends CameraImplBase{
     };
 
     public void open(SurfaceTexture surfaceTexture) {
+        if(surfaceTexture == null) return;
+        if (isStarted()) return;
+        super.open(surfaceTexture);
         mSurfaceTexture = surfaceTexture;
         mSurface = new Surface(surfaceTexture);
         if (mSurface == null) return;
-        if (isStarted()) return;
         try {
             mCameraManager.openCamera(getCamera(), mCameraStateCallback, mBackgroundHandler);
             setStarted(true);
@@ -185,11 +171,16 @@ public class CameraHelperImpl2 extends CameraImplBase{
 
     public void close() {
         if (!isStarted()) return;
+        super.close();
         try {
             if (mCameraCaptureSession != null) {
                 mCameraCaptureSession.abortCaptures();
                 mCameraCaptureSession.close();
                 mCameraCaptureSession = null;
+            }
+            if(mCameraDevice != null){
+                mCameraDevice.close();
+                mCameraDevice = null;
             }
             setStarted(false);
 
@@ -198,12 +189,8 @@ public class CameraHelperImpl2 extends CameraImplBase{
         } catch (SecurityException se) {
             log(se.getMessage());
         }
-
+        super.close();
     }
-
-    protected void test(){
-    }
-
 
 
 }

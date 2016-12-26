@@ -51,15 +51,23 @@ import android.util.Log;
  */
 public class H264Stream extends VideoStream {
 
+	/**
+	 * The constant TAG.
+	 */
 	public final static String TAG = "H264Stream";
 
 	private Semaphore mLock = new Semaphore(0);
 	private MP4Config mConfig;
 
+	/**
+	 * Instantiates a new H 264 stream.
+	 *
+	 * @param context the context
+	 */
 	public H264Stream(Context context) {
 		super(context);
 		mMimeType = "video/avc";
-		mCameraImageFormat = ImageFormat.NV21;
+		//mCameraImageFormat = ImageFormat.NV21;
 		mVideoEncoder = MediaRecorder.VideoEncoder.H264;
 		mPacketizer = new H264Packetizer();
 	}
@@ -118,6 +126,8 @@ public class H264Stream extends VideoStream {
 				mMode = MODE_MEDIARECORDER_API;
 			}
 			EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
+			log("testMediaCodecAPI debugger.getB64SPS() = " + debugger.getB64SPS());
+			log("testMediaCodecAPI debugger.getB64PPS() = " + debugger.getB64PPS());
 			return new MP4Config(debugger.getB64SPS(), debugger.getB64PPS());
 		} catch (Exception e) {
 			// Fallback on the old streaming method using the MediaRecorder API

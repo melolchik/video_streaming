@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.util.Random;
 
+import net.majorkernelpanic.streaming.AppLogger;
 import net.majorkernelpanic.streaming.rtcp.SenderReport;
 
 /**
@@ -160,6 +161,10 @@ abstract public class AbstractPacketizer {
 			return l;
 		}
 
+	}
+
+	protected void log(String message) {
+		//AppLogger.log(getClass().getSimpleName() + " " + message);
 	}
 	
 }

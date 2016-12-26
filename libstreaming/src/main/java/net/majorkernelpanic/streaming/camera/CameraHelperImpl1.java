@@ -1,8 +1,10 @@
 package net.majorkernelpanic.streaming.camera;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -16,6 +18,7 @@ import java.io.IOException;
  * Created by Olga Melekhina on 18.12.2016.
  */
 
+//@TargetApi(Build.VERSION_CODES.KITKAT_WATCH)
 public class CameraHelperImpl1 extends CameraImplBase {
 
     protected int mCameraId = 0;
@@ -23,15 +26,6 @@ public class CameraHelperImpl1 extends CameraImplBase {
 
     public CameraHelperImpl1(Context context, VideoQuality videoQuality) {
         super(context, videoQuality);
-        mMainHandler = new Handler(Looper.getMainLooper());
-
-        new HandlerThread("CameraHelperImpl2") {
-            @Override
-            protected void onLooperPrepared() {
-                mBackgroundHandler = new Handler();
-            }
-        }.start();
-
         setCamera(Camera.CameraInfo.CAMERA_FACING_BACK);
     }
 
@@ -70,46 +64,46 @@ public class CameraHelperImpl1 extends CameraImplBase {
 
     @Override
     public void open(final SurfaceTexture surfaceTexture) {
-
-        mSurfaceTexture = surfaceTexture;
         if (mSurfaceTexture == null) return;
         if (isStarted()) return;
+        super.open(surfaceTexture);
+        mSurfaceTexture = surfaceTexture;
+
         mBackgroundHandler.post(new Runnable() {
             @Override
             public void run() {
                 try {
-                    mCamera = Camera.open();
+                    mCamera = Camera.open(mCameraId);
                     setStarted(true);
 
-                    Camera.Parameters parameters = mCamera.getParameters();
+                   /* Camera.Parameters parameters = mCamera.getParameters();
                     mVideoQuality = VideoQuality.determineClosestSupportedResolution(parameters, mVideoQuality);
                     int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
 
-                    double ratio = (double)mVideoQuality.resX/(double)mVideoQuality.resY;
-
+                    double ratio = (double) mVideoQuality.resX / (double) mVideoQuality.resY;
 
                     parameters.setPreviewSize(mVideoQuality.resX, mVideoQuality.resY);
-                    parameters.setPreviewFpsRange(max[0], max[1]);
+                    parameters.setPreviewFpsRange(max[0], max[1]);*/
                     mCamera.setDisplayOrientation(90);
 
-                    try {
+                    /*try {
                         mCamera.setParameters(parameters);
                         mCamera.setDisplayOrientation(90);
 
                     } catch (RuntimeException e) {
                         throw e;
-                    }
+                    }*/
 
                     mCamera.setPreviewTexture(surfaceTexture);
 
 
-                    //for (int i = 0; i < 10; i++)
-                     //   mCamera.addCallbackBuffer(new byte[3 * mVideoQuality.resX * mVideoQuality.resY / 2]);
+                    /*for (int i = 0; i < 10; i++)
+                        mCamera.addCallbackBuffer(new byte[3 * mVideoQuality.resX * mVideoQuality.resY / 2]);
+                    mCamera.setPreviewCallbackWithBuffer(mPreviewCallback);*/
                     mCamera.setPreviewCallback(mPreviewCallback);
-                    // mCamera.setPreviewCallback(mPreviewCallback);
                     mCamera.startPreview();
                 } catch (IOException e) {
-                    Log.d("CAMERA", e.getMessage());
+                    log(e.getMessage());
                 }
 
             }
@@ -119,11 +113,13 @@ public class CameraHelperImpl1 extends CameraImplBase {
     @Override
     public void close() {
         if (!isStarted()) return;
+
         setStarted(false);
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.release();
         }
+        super.close();
     }
 
 }
